@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CalculationsPage = void 0;
-const test_utils_1 = require("./utils/test-utils");
+const test_utils_1 = require("pages/utils/test-utils");
 class CalculationsPage {
     constructor(page) {
         this.page = page;
@@ -40,12 +40,12 @@ class CalculationsPage {
         await this.iframe.locator(`[data-testid="${action}-option"]`).click();
     }
     async updateNumericValue(field, value) {
-        const input = {
+        const inputs = {
             expiryDays: this.expiryDaysInput,
             finalUnits: this.finalUnitsInput,
             wastagePercentage: this.wastagePercentageInput
-        }[field];
-        await input.fill(value);
+        };
+        await inputs[field].fill(value);
     }
     async selectCapsuleSize(size) {
         await this.capsuleSizeSelect.selectOption(size);
