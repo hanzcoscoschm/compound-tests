@@ -1,6 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
 import { CalculationsPage } from './pages/calculations-page';
-import { TEST_DATA } from './utils/test-utils';
 import type { DosageForm } from './types/calculations.types';
 
 test.describe('Calculator Tests', () => {
@@ -9,10 +8,13 @@ test.describe('Calculator Tests', () => {
     test.beforeEach(async ({ page }: { page: Page }) => {
         calculationsPage = new CalculationsPage(page);
         await calculationsPage.goto();
+        // Additional wait for full page load
+        await page.waitForLoadState('networkidle');
     });
 
     test('can select different medicine forms', async () => {
-        for (const form of TEST_DATA.DOSAGE_FORMS as DosageForm[]) {
+        const forms: DosageForm[] = ['Cream', 'Capsule', 'Tablet', 'Suspension', 'Solution', 'Ointment'];
+        for (const form of forms) {
             await calculationsPage.selectDosageForm(form);
             await calculationsPage.takeScreenshot(`${form.toLowerCase()}-view`);
         }
@@ -20,36 +22,33 @@ test.describe('Calculator Tests', () => {
 
     test.describe('Cream Medicine Tests', () => {
         test.beforeEach(async () => {
-            await calculationsPage.selectDosageForm('Cream' as DosageForm);
+            await calculationsPage.selectDosageForm('Cream');
         });
 
         test('can add and remove ingredients', async () => {
-            const testIngredient = TEST_DATA.SAMPLE_INGREDIENTS[0];
-            const { name, strength } = testIngredient;
-            
-            await calculationsPage.addIngredient(name, strength);
+            // Add ingredient
+            await calculationsPage.addIngredient('Melatonin', '2');
             const ingredients = await calculationsPage.getIngredients();
-            expect(ingredients).toContain(name);
+            expect(ingredients.some(i => i.includes('Melatonin'))).toBeTruthy();
             await calculationsPage.takeScreenshot('cream-ingredient-added');
 
-            await calculationsPage.modifyIngredient(name, 'remove');
+            // Remove ingredient
+            await calculationsPage.modifyIngredient('Melatonin', 'remove');
             const updatedIngredients = await calculationsPage.getIngredients();
-            expect(updatedIngredients).not.toContain(name);
+            expect(updatedIngredients.some(i => i.includes('Melatonin'))).toBeFalsy();
         });
 
         test('calculations update correctly', async () => {
-            const startingUnits = await calculationsPage.finalUnitsInput.inputValue();
-            await calculationsPage.updateNumericValue(
-                'finalUnits', 
-                String(Number(startingUnits) * 2)
-            );
+            await calculationsPage.updateNumericValue('finalUnits', '100');
+            const finalUnitsValue = await calculationsPage.finalUnitsInput.inputValue();
+            expect(finalUnitsValue).toBe('100');
             await calculationsPage.takeScreenshot('cream-calculations');
         });
     });
 
     test.describe('Capsule Medicine Tests', () => {
         test.beforeEach(async () => {
-            await calculationsPage.selectDosageForm('Capsule' as DosageForm);
+            await calculationsPage.selectDosageForm('Capsule');
         });
 
         test('can change capsule size', async () => {
@@ -57,7 +56,7 @@ test.describe('Calculator Tests', () => {
             await calculationsPage.takeScreenshot('capsule-size-3');
         });
 
-        test('can go to pricing page', async ({ page }: { page: Page }) => {
+        test('can go to pricing page', async ({ page }) => {
             await calculationsPage.pricingButton.click();
             await expect(page).toHaveURL(/.*pricing/);
         });

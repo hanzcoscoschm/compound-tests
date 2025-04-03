@@ -1,6 +1,6 @@
 import { Page, Locator, FrameLocator } from '@playwright/test';
-import { waitForIframeLoad } from './utils/test-utils';
-import type { DosageForm, CapsuleSize, NumericField, IngredientAction } from '../types/calculations.types';
+import { waitForIframeLoad } from 'utils/test-utils';
+import type { DosageForm, CapsuleSize, NumericField, IngredientAction } from 'types/calculations.types';
 
 export class CalculationsPage {
     readonly page: Page;
@@ -33,42 +33,68 @@ export class CalculationsPage {
 
     async goto(): Promise<void> {
         await this.page.goto('https://compound.direct/');
-        await waitForIframeLoad(this.page);
+        await this.waitForIframeLoad();
+    }
+
+    private async waitForIframeLoad(): Promise<void> {
+        await this.page.waitForSelector('iframe[src="https://d1k1vhh9i7fpj9.cloudfront.net/"]', { state: 'visible', timeout: 30000 });
+        await this.iframe.locator('#root').waitFor({ state: 'visible', timeout: 30000 });
+        await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 30000 });
     }
 
     async selectDosageForm(form: DosageForm): Promise<void> {
-        await this.dosageFormSelect.selectOption(form.toLowerCase());
-        await this.page.waitForTimeout(500);
+        await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 10000 });
+        await this.dosageFormSelect.selectOption(form);
+        await this.page.waitForTimeout(1000); // Wait for form to update
     }
 
     async getIngredients(): Promise<string[]> {
+        await this.ingredientsList.waitFor({ timeout: 5000 });
         return this.ingredientsList.allTextContents();
     }
 
     async addIngredient(name: string, strength: string): Promise<void> {
+        await this.addIngredientButton.waitFor({ state: 'visible', timeout: 5000 });
         await this.addIngredientButton.click();
+        
+        await this.ingredientNameInput.waitFor({ state: 'visible', timeout: 5000 });
         await this.ingredientNameInput.fill(name);
         await this.ingredientStrengthInput.fill(strength);
-        await this.iframe.locator('button[data-testid="confirm-add"]').click();
+        
+        const confirmButton = this.iframe.locator('button[data-testid="confirm-add"]');
+        await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
+        await confirmButton.click();
+        await this.page.waitForTimeout(500); // Wait for UI update
     }
 
     async modifyIngredient(name: string, action: IngredientAction): Promise<void> {
         const ingredient = this.iframe.locator(`[data-testid="ingredient-${name}"]`);
+        await ingredient.waitFor({ timeout: 5000 });
         await ingredient.locator('.more-vert').click();
-        await this.iframe.locator(`[data-testid="${action}-option"]`).click();
+        
+        const actionButton = this.iframe.locator(`[data-testid="${action}-option"]`);
+        await actionButton.waitFor({ state: 'visible', timeout: 5000 });
+        await actionButton.click();
+        await this.page.waitForTimeout(500); // Wait for UI update
     }
 
     async updateNumericValue(field: NumericField, value: string): Promise<void> {
-        const input = {
+        const inputs: Record<NumericField, Locator> = {
             expiryDays: this.expiryDaysInput,
             finalUnits: this.finalUnitsInput,
             wastagePercentage: this.wastagePercentageInput
-        }[field] as Locator;
+        };
+        
+        const input = inputs[field];
+        await input.waitFor({ state: 'visible', timeout: 5000 });
         await input.fill(value);
+        await this.page.waitForTimeout(500); // Wait for calculations to update
     }
 
     async selectCapsuleSize(size: CapsuleSize): Promise<void> {
+        await this.capsuleSizeSelect.waitFor({ state: 'visible', timeout: 5000 });
         await this.capsuleSizeSelect.selectOption(size);
+        await this.page.waitForTimeout(500); // Wait for UI update
     }
 
     async takeScreenshot(name: string): Promise<void> {

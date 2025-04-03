@@ -13,7 +13,13 @@
     "allowJs": true,
     "checkJs": true,
     "outDir": "dist",
-    "baseUrl": "./tests"
+    "baseUrl": ".",
+    "paths": {
+      "pages/*": ["tests/pages/*"],
+      "types/*": ["tests/types/*"],
+      "utils/*": ["tests/utils/*"]
+    },
+    "rootDir": "."
   },
   "include": ["tests/**/*.ts", "tests/**/*.js"],                // Include all TypeScript and JavaScript files
   "exclude": ["node_modules", "dist"]            // Exclude dependencies and output directory
