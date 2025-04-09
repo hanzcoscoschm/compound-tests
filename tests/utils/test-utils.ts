@@ -1,32 +1,48 @@
 import { Page } from '@playwright/test';
-import type { DosageForm, CapsuleSize } from '../types/calculations.types';
+import type { CompoundFormulation } from '../types/calculations.types';
 
-export interface TestData {
-    readonly DOSAGE_FORMS: readonly DosageForm[];
-    readonly CAPSULE_SIZES: readonly CapsuleSize[];
-    readonly SAMPLE_INGREDIENTS: readonly {
-        readonly name: string;
-        readonly strength: string;
-    }[];
+export const DEFAULT_TIMEOUT = 30000;
+
+export function getTestData(): CompoundFormulation {
+    return {
+        dosageForm: 'Capsule',
+        ingredients: [
+            {
+                name: 'Progesterone',
+                strength: 100,
+                strengthUnit: 'mg',
+                isExcipient: false,
+                percentage: 80
+            },
+            {
+                name: 'Pregnenolone',
+                strength: 25,
+                strengthUnit: 'mg',
+                isExcipient: false,
+                percentage: 20
+            }
+        ],
+        expiryDays: 90,
+        finalUnits: 30,
+        wastagePercentage: 10,
+        capsuleSize: '0'
+    };
 }
 
 export async function waitForIframeLoad(page: Page): Promise<void> {
-    await page.waitForSelector('iframe[src="https://d1k1vhh9i7fpj9.cloudfront.net/"]', { state: 'visible' });
-    const frame = page.frameLocator('iframe[src="https://d1k1vhh9i7fpj9.cloudfront.net/"]');
-    await frame.locator('#root').waitFor({ state: 'visible' });
+    try {
+        await page.waitForSelector('#compounding-demo iframe', { state: 'visible', timeout: DEFAULT_TIMEOUT });
+        const frame = page.frameLocator('#compounding-demo iframe');
+        await frame.locator('#root').waitFor({ state: 'visible', timeout: DEFAULT_TIMEOUT });
+    } catch (error) {
+        console.error('Error in waitForIframeLoad:', error);
+        throw error;
+    }
 }
 
-interface Ingredient {
-    name: string;
-    strength: string;
+export async function takeScreenshot(page: Page, name: string): Promise<void> {
+    await page.screenshot({ 
+        path: `test-results/screenshots/${name}.png`,
+        fullPage: true 
+    });
 }
-
-export const TEST_DATA: TestData = {
-    DOSAGE_FORMS: ['Cream', 'Capsule', 'Tablet', 'Suspension', 'Solution', 'Ointment'] as DosageForm[],
-    CAPSULE_SIZES: ['#0', '#1', '#2', '#3', '#4', '#5'] as CapsuleSize[],
-    SAMPLE_INGREDIENTS: [
-        { name: 'Melatonin', strength: '2' },
-        { name: 'Vitamin C', strength: '500' },
-        { name: 'Zinc', strength: '50' }
-    ] as Ingredient[]
-};

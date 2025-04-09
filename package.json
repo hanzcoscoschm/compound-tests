@@ -1,24 +1,27 @@
 {
-    "name": "compound-tests",
-    "version": "1.0.0",
-    "description": "E2E tests for the Compound Direct calculator",
-    "main": "index.js",
-    "scripts": {
-      "build": "tsc",
-      "test": "npm run build && playwright test",
-      "test:ui": "npm run build && playwright test --ui",
-      "test:debug": "npm run build && playwright test --debug"
-    },
-    "keywords": [
-      "e2e",
-      "testing",
-      "playwright"
-    ],
-    "author": "",
-    "license": "ISC",
-    "devDependencies": {
-      "@playwright/test": "^1.42.0",
-      "@types/node": "^20.11.0",
-      "typescript": "^5.3.0"
-    }
+  "name": "compound-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for Compound Direct calculator",
+  "scripts": {
+    "clean": "rimraf test-results/ playwright-report/ tests/**/*.js",
+    "build": "tsc",
+    "pretest": "npm run clean && npm run build",
+    "test": "playwright test",
+    "test:debug": "npm run pretest && playwright test --debug",
+    "test:ui": "npm run pretest && playwright test --ui",
+    "test:headed": "npm run pretest && playwright test --headed",
+    "install:browsers": "playwright install chromium",
+    "report": "playwright show-report"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.41.2",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.16",
+    "rimraf": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
+}

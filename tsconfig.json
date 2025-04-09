@@ -1,26 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES2021",                     // Modern JavaScript features
-    "module": "commonjs",                   // Use CommonJS for Node.js
-    "lib": ["ES2021", "dom"],              // Include browser APIs
-    "strict": true,                        // Enable strict type checking
-    "esModuleInterop": true,              // Better import/export compatibility
-    "skipLibCheck": true,                 // Skip type checking of dependencies
+    "target": "es2021",
+    "lib": ["es2021", "dom"],
+    "strict": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,            // Allow importing JSON files
-    "moduleResolution": "node",           // Use Node module resolution
-    "types": ["node", "@playwright/test"],  // Include type definitions
-    "allowJs": true,
-    "checkJs": true,
-    "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "pages/*": ["tests/pages/*"],
-      "types/*": ["tests/types/*"],
-      "utils/*": ["tests/utils/*"]
-    },
-    "rootDir": "."
+      "@/*": ["*"]
+    }
   },
-  "include": ["tests/**/*.ts", "tests/**/*.js"],                // Include all TypeScript and JavaScript files
-  "exclude": ["node_modules", "dist"]            // Exclude dependencies and output directory
+  "include": ["tests/**/*.ts"],
+  "exclude": ["node_modules"]
 }

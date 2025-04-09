@@ -1,120 +1,73 @@
-# Compound Direct Calculator E2E Tests
+# Compound Direct Calculator Tests
 
-This repository contains end-to-end tests for the Compound Direct calculator component using Playwright with TypeScript.
+End-to-end tests for the Compound Direct calculator application.
 
-## Features Tested
+## Prerequisites
 
-- Dosage Form Selection (6 different forms)
-- Cream Medicine Functionality
-  - Initial ingredients verification
-  - Numeric value calculations
-  - Ingredient management (add, remove, convert to excipient)
-  - Base percentage adjustments
-  - Ingredient order manipulation
-- Capsule Medicine Functionality
-  - Initial state verification
-  - Capsule size selection
-  - Pricing page navigation
+- Node.js >= 16.0.0
+- npm >= 7.0.0
 
-## Test Coverage
+## Setup
 
-- Positive test cases
-- Negative test cases
-- Edge cases
-- UI interaction tests
-- Navigation tests
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Install browser:
+```bash
+npm run install:browsers
+```
+
+## Running Tests
+
+Run tests in debug mode with browser visible:
+```bash
+npm run test:debug
+```
+
+Run tests in headless mode:
+```bash
+npm test
+```
+
+Run tests with UI mode:
+```bash
+npm run test:ui
+```
+
+Run tests in headed mode:
+```bash
+npm run test:headed
+```
+
+## Test Reports
+
+View test reports:
+```bash
+npm run report
+```
 
 ## Project Structure
 
 ```
-compound-tests/
+.
 ├── tests/
-│   ├── calculations.spec.ts     # Main test specifications
-│   ├── pages/
-│   │   └── calculations-page.ts # Page Object Model
-│   ├── types/
-│   │   └── calculations.types.ts # TypeScript type definitions
-│   └── utils/
-│       └── test-utils.ts        # Shared test utilities
-├── playwright.config.ts         # Playwright configuration
-└── package.json                 # Project dependencies
+│   ├── pages/          # Page Object Models
+│   ├── types/          # TypeScript type definitions
+│   ├── utils/          # Test utilities and helpers
+│   └── *.spec.ts       # Test files
+├── playwright.config.ts # Playwright configuration
+├── package.json        # Project dependencies and scripts
+└── tsconfig.json       # TypeScript configuration
 ```
 
-## Getting Started
+## Test Cases
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Install Playwright browsers:
-   ```bash
-   npx playwright install
-   ```
-
-3. Run tests:
-   ```bash
-   npm test
-   ```
-
-4. Run tests with UI:
-   ```bash
-   npm run test:ui
-   ```
-
-5. Run tests in debug mode:
-   ```bash
-   npm run test:debug
-   ```
-
-## Test Design Principles
-
-- **Page Object Model**: Separates test logic from page interactions
-- **Type Safety**: Utilizes TypeScript for better code quality
-- **Reusability**: Common functions and data are shared across tests
-- **Maintainability**: Well-structured and documented code
-- **Reliability**: Proper wait strategies and error handling
-
-## Best Practices Implemented
-
-1. **Element Selection**
-   - Using data-testid attributes
-   - Stable selectors
-   - Clear locator naming
-
-2. **Wait Strategies**
-   - Explicit waits for elements
-   - Network idle checks
-   - Frame loading verification
-
-3. **Error Handling**
-   - Timeout management
-   - Graceful failure handling
-   - Clear error messages
-
-4. **Test Organization**
-   - Logical grouping
-   - Clear test descriptions
-   - Shared setup where appropriate
-
-## Screenshots
-
-Tests automatically capture screenshots at key points:
-- Different dosage form views
-- After ingredient modifications
-- Before/after calculations
-- Error states
-
-Screenshots are saved in the `test-results/screenshots/` directory.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests to ensure everything works
-5. Submit a pull request
-
-## License
-
-ISC
+1. Calculator Page Loading
+2. Dosage Form Selection
+3. Ingredient Management
+4. Numeric Field Updates
+5. Capsule-specific Features
+6. Excipient Handling
+7. Ingredient Order Management

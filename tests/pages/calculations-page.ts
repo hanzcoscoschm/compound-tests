@@ -1,5 +1,4 @@
-import { Page, Locator, FrameLocator } from '@playwright/test';
-import { waitForIframeLoad } from '../utils/test-utils';
+import { Page, Locator, FrameLocator, expect } from '@playwright/test';
 import type { DosageForm, CapsuleSize, NumericField, IngredientAction } from '../types/calculations.types';
 
 export class CalculationsPage {
@@ -22,58 +21,196 @@ export class CalculationsPage {
 
     constructor(page: Page) {
         this.page = page;
-        this.iframe = page.frameLocator('iframe[src="https://d1k1vhh9i7fpj9.cloudfront.net/"]');
-        this.dosageFormSelect = this.iframe.locator('select[data-testid="dosage-form-select"]');
-        this.ingredientsList = this.iframe.locator('[data-testid="ingredients-list"]');
-        this.expiryDaysInput = this.iframe.locator('input[data-testid="expiry-days"]');
-        this.finalUnitsInput = this.iframe.locator('input[data-testid="final-units"]');
-        this.wastagePercentageInput = this.iframe.locator('input[data-testid="wastage-percentage"]');
-        this.capsuleSizeSelect = this.iframe.locator('select[data-testid="capsule-size"]');
-        this.addIngredientButton = this.iframe.locator('button[data-testid="add-ingredient"]');
-        this.ingredientNameInput = this.iframe.locator('input[data-testid="ingredient-name"]');
-        this.ingredientStrengthInput = this.iframe.locator('input[data-testid="ingredient-strength"]');
-        this.pricingButton = this.iframe.getByRole('link', { name: 'Pricing' });
-        this.ingredientRows = this.iframe.locator('[data-testid="ingredient-row"]');
-        this.moreVertButtons = this.iframe.locator('button[aria-label="more options"]');
-        this.excipientsList = this.iframe.locator('[data-testid="excipients-list"]');
-        this.reverseOrderButton = this.iframe.locator('button[aria-label="reverse order"]');
+        this.iframe = page.frameLocator('#compounding-demo iframe');
+        
+        // Update selectors to match React Select components
+        this.dosageFormSelect = this.iframe.locator('.react-select__control').first();
+        this.ingredientsList = this.iframe.locator('form').first();
+        this.expiryDaysInput = this.iframe.locator('input[type="number"]').first();
+        this.finalUnitsInput = this.iframe.locator('input[placeholder="e.g. 100"]');
+        this.wastagePercentageInput = this.iframe.locator('input[type="number"]').nth(1);
+        this.capsuleSizeSelect = this.iframe.locator('.react-select__control').nth(1);
+        this.addIngredientButton = this.iframe.locator('[role="button"], button, .clickable, div', { 
+            hasText: /^Add Ingredient$/
+        });
+        this.ingredientNameInput = this.iframe.locator('.react-select__control').nth(2);
+        this.ingredientStrengthInput = this.iframe.locator('input[placeholder="Strength"]').first();
+        this.pricingButton = this.iframe.getByRole('link', { name: /pricing/i });
+        this.ingredientRows = this.iframe.locator('.sc-dIfARi');
+        this.moreVertButtons = this.iframe.locator('button[aria-label*="options"]');
+        this.excipientsList = this.iframe.locator('[role="list"]').nth(1);
+        this.reverseOrderButton = this.iframe.locator('button[aria-label*="reverse"]');
     }
 
     async goto(): Promise<void> {
-        await this.page.goto('https://compound.direct/');
-        await this.waitForIframeLoad();
-    }
-
-    async waitForIframeLoad(): Promise<void> {
-        await this.page.waitForSelector('iframe[src="https://d1k1vhh9i7fpj9.cloudfront.net/"]', { state: 'visible', timeout: 30000 });
-        await this.iframe.locator('#root').waitFor({ state: 'visible', timeout: 30000 });
-        await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 30000 });
+        try {
+            await this.page.goto('https://compound.direct/', { 
+                waitUntil: 'networkidle',
+                timeout: 30000 
+            });
+            
+            // Wait for iframe
+            const iframeLocator = this.page.locator('#compounding-demo iframe');
+            await expect(iframeLocator).toBeVisible({ timeout: 30000 });
+            
+            // Log iframe source for debugging
+            const iframeSrc = await iframeLocator.getAttribute('src');
+            console.log('Found iframe with src:', iframeSrc);
+            
+            // Wait for React app to initialize
+            await this.iframe.locator('#root').waitFor({ state: 'visible', timeout: 30000 });
+            await this.page.waitForTimeout(2000); // Give React time to hydrate
+            
+            // Wait for form to be ready
+            await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 30000 });
+            
+            console.log('Calculator page loaded successfully');
+        } catch (error) {
+            console.error('Error loading calculator page:', error);
+            await this.page.screenshot({ path: 'test-results/screenshots/page-load-error.png', fullPage: true });
+            throw error;
+        }
     }
 
     async selectDosageForm(form: DosageForm): Promise<void> {
-        await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 10000 });
-        await this.dosageFormSelect.selectOption(form);
-        await this.page.waitForTimeout(1000); // Wait for form to update
+        try {
+            // Wait for and click the select container
+            await this.dosageFormSelect.waitFor({ state: 'visible', timeout: 30000 });
+            await this.dosageFormSelect.click();
+            
+            // Wait for menu to open
+            const menu = this.iframe.locator('.react-select__menu');
+            await menu.waitFor({ state: 'visible', timeout: 30000 });
+            
+            // Click the option
+            const option = menu.locator(`.react-select__option:has-text("${form}")`);
+            await option.waitFor({ state: 'visible', timeout: 30000 });
+            await option.click();
+            
+            // Wait for form to update
+            await this.page.waitForTimeout(1000);
+            
+            console.log(`Selected dosage form: ${form}`);
+        } catch (error) {
+            console.error(`Error selecting dosage form ${form}:`, error);
+            await this.page.screenshot({ path: `test-results/screenshots/select-form-error-${form}.png`, fullPage: true });
+            throw error;
+        }
     }
 
     async getSelectedDosageForm(): Promise<string> {
-        const value = await this.dosageFormSelect.inputValue();
-        return value;
+        const selectValue = this.iframe.locator('.react-select__single-value').first();
+        await selectValue.waitFor({ state: 'visible', timeout: 30000 });
+        const text = await selectValue.textContent();
+        if (!text) {
+            throw new Error('Could not get selected dosage form value');
+        }
+        return text;
+    }
+
+    async addIngredient(name: string, strength: string): Promise<void> {
+        try {
+            // Try to find the Add Ingredient button
+            const addButton = await this.addIngredientButton.elementHandle();
+            if (!addButton) {
+                console.error('Add Ingredient button not found, logging page state...');
+                const clickableElements = await this.iframe.locator('[role="button"], button, .clickable, div').all();
+                console.log('Current clickable elements:', await Promise.all(clickableElements.map(async el => ({
+                    text: await el.textContent(),
+                    tag: await el.evaluate(node => node.tagName.toLowerCase()),
+                    class: await el.getAttribute('class'),
+                    role: await el.getAttribute('role')
+                }))));
+                throw new Error('Add Ingredient button not found');
+            }
+            
+            await addButton.click();
+            await this.page.waitForTimeout(500); // Wait for modal to open
+            
+            // Select ingredient name
+            await this.ingredientNameInput.waitFor({ state: 'visible', timeout: 30000 });
+            await this.ingredientNameInput.click();
+            
+            // Wait for menu to open
+            const menu = this.iframe.locator('.react-select__menu');
+            await menu.waitFor({ state: 'visible', timeout: 30000 });
+            
+            // Click the option
+            const option = menu.locator(`.react-select__option:has-text("${name}")`);
+            await option.waitFor({ state: 'visible', timeout: 30000 });
+            await option.click();
+            
+            // Enter strength
+            await this.ingredientStrengthInput.waitFor({ state: 'visible', timeout: 30000 });
+            await this.ingredientStrengthInput.fill(strength);
+            await this.ingredientStrengthInput.press('Enter');
+            
+            await this.page.waitForTimeout(1000); // Wait for ingredient to be added
+            console.log(`Added ingredient: ${name} with strength ${strength}`);
+        } catch (error) {
+            console.error(`Error adding ingredient ${name}:`, error);
+            await this.page.screenshot({ path: `test-results/screenshots/add-ingredient-error-${name}.png`, fullPage: true });
+            throw error;
+        }
     }
 
     async getIngredients(): Promise<string[]> {
-        await this.ingredientsList.waitFor();
+        // Wait for any ingredient row to be visible
+        await this.ingredientRows.first().waitFor({ state: 'visible', timeout: 30000 });
         const rows = await this.ingredientRows.all();
-        return Promise.all(rows.map(async row => await row.textContent() || ''));
+        return Promise.all(rows.map(async row => {
+            const text = await row.textContent();
+            if (!text) {
+                throw new Error('Could not get ingredient row text');
+            }
+            return text;
+        }));
     }
 
-    async getNumericValue(field: NumericField): Promise<string> {
-        const input = {
-            expiryDays: this.expiryDaysInput,
-            finalUnits: this.finalUnitsInput,
-            wastagePercentage: this.wastagePercentageInput
-        }[field];
-        return await input.inputValue();
+    async getIngredientPercentage(name: string): Promise<string> {
+        const ingredients = await this.getIngredients();
+        for (const ingredient of ingredients) {
+            if (ingredient.includes(name)) {
+                const match = ingredient.match(/(\d+(?:\.\d+)?)%/);
+                return match ? match[1] : '0';
+            }
+        }
+        return '0';
+    }
+
+    async modifyIngredient(name: string, action: IngredientAction): Promise<void> {
+        try {
+            const rows = await this.ingredientRows.all();
+            for (let i = 0; i < rows.length; i++) {
+                const text = await rows[i].textContent();
+                if (text?.includes(name)) {
+                    await this.moreVertButtons.nth(i).click();
+                    const menuItem = this.iframe.getByRole('menuitem', { name: action });
+                    await menuItem.waitFor({ state: 'visible', timeout: 30000 });
+                    await menuItem.click();
+                    await this.page.waitForTimeout(1000);
+                    console.log(`Modified ingredient ${name} with action ${action}`);
+                    return;
+                }
+            }
+            throw new Error(`Ingredient ${name} not found`);
+        } catch (error) {
+            console.error(`Error modifying ingredient ${name}:`, error);
+            await this.page.screenshot({ path: `test-results/screenshots/modify-ingredient-error-${name}.png`, fullPage: true });
+            throw error;
+        }
+    }
+
+    async getExcipients(): Promise<string[]> {
+        await this.excipientsList.waitFor({ state: 'visible', timeout: 30000 });
+        const items = await this.excipientsList.locator('li').all();
+        return Promise.all(items.map(async item => {
+            const text = await item.textContent();
+            if (!text) {
+                throw new Error('Could not get excipient text');
+            }
+            return text;
+        }));
     }
 
     async updateNumericValue(field: NumericField, value: string): Promise<void> {
@@ -82,61 +219,65 @@ export class CalculationsPage {
             finalUnits: this.finalUnitsInput,
             wastagePercentage: this.wastagePercentageInput
         }[field];
+        
+        await input.waitFor({ state: 'visible', timeout: 30000 });
+        await input.click();
         await input.fill(value);
         await input.press('Enter');
+        await this.page.waitForTimeout(500);
+        console.log(`Updated ${field} to ${value}`);
     }
 
-    async addIngredient(name: string, strength: string): Promise<void> {
-        await this.addIngredientButton.click();
-        await this.ingredientNameInput.fill(name);
-        await this.ingredientStrengthInput.fill(strength);
-        await this.ingredientStrengthInput.press('Enter');
-        await this.page.waitForTimeout(500); // Wait for ingredient to be added
-    }
-
-    async getIngredientPercentage(name: string): Promise<string> {
-        const rows = await this.ingredientRows.all();
-        for (const row of rows) {
-            const text = await row.textContent();
-            if (text?.includes(name)) {
-                const percentage = text.match(/(\d+(?:\.\d+)?)%/)?.[1];
-                return percentage || '0';
-            }
-        }
-        return '0';
-    }
-
-    async modifyIngredient(name: string, action: IngredientAction): Promise<void> {
-        const rows = await this.ingredientRows.all();
-        for (let i = 0; i < rows.length; i++) {
-            const text = await rows[i].textContent();
-            if (text?.includes(name)) {
-                await this.moreVertButtons.nth(i).click();
-                await this.iframe.getByRole('menuitem', { name: action === 'use-as-excipient' ? 'Use as excipient' : 'Remove' }).click();
-                break;
-            }
-        }
-        await this.page.waitForTimeout(500); // Wait for action to complete
-    }
-
-    async getExcipients(): Promise<string[]> {
-        await this.excipientsList.waitFor();
-        const items = await this.excipientsList.locator('li').all();
-        return Promise.all(items.map(async item => await item.textContent() || ''));
-    }
-
-    async reverseIngredientOrder(): Promise<void> {
-        await this.reverseOrderButton.click();
-        await this.page.waitForTimeout(500); // Wait for order to update
+    async getNumericValue(field: NumericField): Promise<string> {
+        const input = {
+            expiryDays: this.expiryDaysInput,
+            finalUnits: this.finalUnitsInput,
+            wastagePercentage: this.wastagePercentageInput
+        }[field];
+        
+        await input.waitFor({ state: 'visible', timeout: 30000 });
+        return input.inputValue();
     }
 
     async selectCapsuleSize(size: CapsuleSize): Promise<void> {
-        await this.capsuleSizeSelect.selectOption(size);
-        await this.page.waitForTimeout(500); // Wait for size to update
+        try {
+            // Wait for and click the select container
+            await this.capsuleSizeSelect.waitFor({ state: 'visible', timeout: 30000 });
+            await this.capsuleSizeSelect.click();
+            
+            // Wait for menu to open
+            const menu = this.iframe.locator('.react-select__menu');
+            await menu.waitFor({ state: 'visible', timeout: 30000 });
+            
+            // Click the option
+            const option = menu.locator(`.react-select__option:has-text("${size}")`);
+            await option.waitFor({ state: 'visible', timeout: 30000 });
+            await option.click();
+            
+            await this.page.waitForTimeout(500);
+            console.log(`Selected capsule size: ${size}`);
+        } catch (error) {
+            console.error(`Error selecting capsule size ${size}:`, error);
+            await this.page.screenshot({ path: `test-results/screenshots/select-size-error-${size}.png`, fullPage: true });
+            throw error;
+        }
     }
 
     async getSelectedCapsuleSize(): Promise<string> {
-        return await this.capsuleSizeSelect.inputValue();
+        const selectValue = this.iframe.locator('.react-select__single-value').nth(1);
+        await selectValue.waitFor({ state: 'visible', timeout: 30000 });
+        const text = await selectValue.textContent();
+        if (!text) {
+            throw new Error('Could not get selected capsule size value');
+        }
+        return text;
+    }
+
+    async reverseIngredientOrder(): Promise<void> {
+        await this.reverseOrderButton.waitFor({ state: 'visible', timeout: 30000 });
+        await this.reverseOrderButton.click();
+        await this.page.waitForTimeout(500);
+        console.log('Reversed ingredient order');
     }
 
     async getTotalPercentage(): Promise<string> {
@@ -149,9 +290,5 @@ export class CalculationsPage {
             }
         }
         return total.toString();
-    }
-
-    async takeScreenshot(name: string): Promise<void> {
-        await this.page.screenshot({ path: `test-results/screenshots/${name}.png` });
     }
 }
